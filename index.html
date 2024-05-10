@@ -1,0 +1,867 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <title>Gestão da Empresa</title>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+            width: 80%; /* Define a largura total da página */
+            height: 80%;
+            margin: 0 auto; /* Centraliza a página na tela */
+            display: flex;
+            flex-direction: column; /* Faz com que os elementos dentro do corpo sejam empilhados verticalmente */
+        
+        }
+
+        h1, h2 {
+            text-align: center;
+        }
+
+        .menu {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            margin-bottom: 40px;
+            max-width: 80%;
+            margin: 0 auto; /* Centraliza o menu no contêiner */
+        }
+
+        .menu button {
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 30px;
+            margin: 0 10px; /* Adiciona espaçamento entre os botões */
+            margin: 10px; /* Adiciona espaçamento entre os botões */
+            flex: 1 0 45%; /* Permite que os botões ocupem 45% da largura, para ajustar dois por linha */
+        }
+
+        form {
+            width: 80vw; /* Define a largura total da página */
+            height: 80vh;
+            max-width: 90%;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #fff;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            flex: 1; /* Faz com que os formulários ocupem todo o espaço vertical disponível */
+            overflow-y: auto; /* Adiciona uma barra de rolagem vertical caso o conteúdo seja maior que a altura do formulário */
+        }
+
+        form label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            font-size: 40px;
+        }
+        
+        form button {
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 30px;
+            margin: 0 10px; /* Adiciona espaçamento entre os botões */
+        }
+
+        form input[type="text"],
+        form input[type="number"],
+        form select {
+            width: calc(100% - 20px);
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            box-sizing: border-box;
+            font-size: 30px;
+        }
+
+        #resultado {
+            text-align: center;
+            margin-top: 20px;
+            font-weight: bold;
+        }
+        
+        /* Estilo para a Tabela */
+        #resultadoTabela {
+            width: 100%;
+            border-collapse: collapse; /* Remove os espaços entre as células */
+            background-color: #fff;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            margin: 20px 0;
+            border-radius: 10px;
+            overflow: hidden; /* Esconde as bordas arredondadas */
+            font-size: 30px;
+        }
+        
+        #resultadoTabela th, #resultadoTabela td {
+            border: 1px solid #ccc;
+            padding: 15px;
+            text-align: left;
+            font-size: 25px;
+        }
+        
+        #resultadoTabela th {
+            background-color: #FFFF00;
+            color: #000000;
+            font-weight: bold;
+            text-transform: uppercase; /* Letra maiúscula nas colunas */
+        }
+        
+        #resultadoTabela td {
+            background-color: #f9f9f9;
+        }
+        
+        #resultadoTabela tr:hover {
+            background-color: #FFFF40; /* Mudar a cor ao passar o mouse */
+        }
+
+    </style>
+    <script>
+        function obterCoordenadas() {
+            // Verifica se a API de Geolocalização está disponível
+            if ("geolocation" in navigator) {
+                // Obtém a posição do usuário
+                navigator.geolocation.getCurrentPosition(function(posicao) {
+                    var latitude = posicao.coords.latitude;
+                    var longitude = posicao.coords.longitude;
+                    document.getElementById("resultado").textContent = `Latitude: ${latitude}, Longitude: ${longitude}`;
+                }, function(error) {
+                    // Trata possíveis erros
+                    switch(error.code) {
+                        case error.PERMISSION_DENIED:
+                            alert("Usuário negou o acesso à localização.");
+                            break;
+                        case error.POSITION_UNAVAILABLE:
+                            alert("Informações sobre a localização indisponíveis.");
+                            break;
+                        case error.TIMEOUT:
+                            alert("A requisição expirou.");
+                            break;
+                        case error.UNKNOWN_ERROR:
+                            alert("Erro desconhecido.");
+                            break;
+                    }
+                });
+            } else {
+                alert("A geolocalização não é suportada neste navegador.");
+            }
+        }
+        // Função para enviar solicitações AJAX ao back-end
+        function enviarSolicitacao(acao, dados) {
+            return fetch('backend.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ acao, ...dados })
+            }).then(response => response.text());
+        }
+
+        // Inserir Local
+        function inserirLocal() {
+            const local = document.getElementById('local').value;
+            const latitude = parseFloat(document.getElementById('latitude').value);
+            const longitude = parseFloat(document.getElementById('longitude').value);
+
+            enviarSolicitacao('inserirLocal', { local, latitude, longitude })
+                .then(data => alert(data));
+        }
+
+        // Adicionar Ingrediente
+        function adicionarIngrediente() {
+            const nomeIngrediente = document.getElementById('nomeIngrediente').value;
+
+            enviarSolicitacao('adicionarIngrediente', { nomeIngrediente })
+                .then(data => alert(data));
+        }
+
+        // Inserir Receita
+        let contadorIngrediente = 0;
+        let listaIngredientes = []; // Suponha que esta lista seja preenchida com os nomes dos ingredientes disponíveis.
+        
+        // Função para carregar a lista de ingredientes via AJAX e salvar na variável listaIngredientes.
+        function carregarListaIngredientes() {
+            fetch('backend.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ acao: 'lerIngredientes' })
+            })
+            .then(response => response.json())
+            .then(data => {
+                listaIngredientes = data;
+            });
+        }
+        
+        // Função para adicionar um novo campo de ingrediente com seleção.
+        function adicionarIngredienteCampo() {
+            const container = document.getElementById('ingredientesContainer');
+            const div = document.createElement('div');
+            
+            // Criar elemento <select> com as opções dos ingredientes.
+            let selectHTML = `<label>Ingrediente ${contadorIngrediente + 1}:</label>
+                              <select name="ingrediente${contadorIngrediente}" required>`;
+            listaIngredientes.forEach(ingrediente => {
+                selectHTML += `<option value="${ingrediente}">${ingrediente}</option>`;
+            });
+            selectHTML += `</select>`;
+        
+            // Criar campo para a quantidade.
+            div.innerHTML = `${selectHTML}
+                             <label>Quantidade:</label>
+                             <input type="text" name="quantidade${contadorIngrediente}" required><br>`;
+        
+            container.appendChild(div);
+            contadorIngrediente++;
+        }
+
+
+        function inserirReceita() {
+            const nomeReceita = document.getElementById('nomeReceita').value;
+            const ingredientes = {};
+            for (let i = 0; i < contadorIngrediente; i++) {
+                const ingrediente = document.querySelector(`[name=ingrediente${i}]`).value;
+                const quantidade = document.querySelector(`[name=quantidade${i}]`).value;
+                ingredientes[ingrediente] = quantidade;
+            }
+
+            enviarSolicitacao('inserirReceita', { nomeReceita, ingredientes })
+                .then(data => alert(data));
+        }
+        
+        function inserirCompra() {
+            // Obtém os valores dos inputs
+            const ingrediente = document.getElementById('ingrediente').value;
+            const preco = document.getElementById('preco').value;
+            const quantidade = document.getElementById('quantidade').value;
+        
+            // Obtém a localização
+            navigator.geolocation.getCurrentPosition(
+                function (posicao) {
+                    // Captura latitude e longitude
+                    const latitude = posicao.coords.latitude;
+                    const longitude = posicao.coords.longitude;
+        
+                    // Faz a solicitação após obter a localização
+                    enviarSolicitacao('inserirCompra', { ingrediente, preco, quantidade, latitude, longitude })
+                        .then(data => alert(data))
+                        .catch(err => alert(`Erro ao enviar solicitação: ${err.message}`));
+                },
+                function (error) {
+                    // Trata possíveis erros
+                    switch (error.code) {
+                        case error.PERMISSION_DENIED:
+                            alert("Usuário negou o acesso à localização.");
+                            break;
+                        case error.POSITION_UNAVAILABLE:
+                            alert("Informações sobre a localização indisponíveis.");
+                            break;
+                        case error.TIMEOUT:
+                            alert("A requisição expirou.");
+                            break;
+                        case error.UNKNOWN_ERROR:
+                            alert("Erro desconhecido.");
+                            break;
+                    }
+                }
+            );
+        }
+
+        
+        function inserirVenda() {
+            // Obtém os valores dos inputs
+            const item = document.getElementById('item').value;
+            const quantidade = document.getElementById('quantidade_venda').value;
+        
+            // Obtém a localização
+            navigator.geolocation.getCurrentPosition(
+                function (posicao) {
+                    // Captura latitude e longitude
+                    const latitude = posicao.coords.latitude;
+                    const longitude = posicao.coords.longitude;
+        
+                    // Faz a solicitação após obter a localização
+                    enviarSolicitacao('inserirVenda', { item, quantidade, latitude, longitude })
+                        .then(data => alert(data))
+                        .catch(err => alert(`Erro ao enviar solicitação: ${err.message}`));
+                },
+                function (error) {
+                    // Trata possíveis erros
+                    switch (error.code) {
+                        case error.PERMISSION_DENIED:
+                            alert("Usuário negou o acesso à localização.");
+                            break;
+                        case error.POSITION_UNAVAILABLE:
+                            alert("Informações sobre a localização indisponíveis.");
+                            break;
+                        case error.TIMEOUT:
+                            alert("A requisição expirou.");
+                            break;
+                        case error.UNKNOWN_ERROR:
+                            alert("Erro desconhecido.");
+                            break;
+                    }
+                }
+            );
+        }
+
+        function carregarItens() {
+            enviarSolicitacao('lerItens', {})
+                .then(data => {
+                    const itens = JSON.parse(data);
+                    const selects = {
+                        'item': document.getElementById('item'),
+                        'itemPreco': document.getElementById('itemPreco'),
+                        'itemAdicional': document.getElementById('itemAdicional'),
+                        'itemProducao': document.getElementById('itemProducao'),
+                        'itemRProducao': document.getElementById('itemRProducao'),
+                        'itemReceita': document.getElementById('itemReceita')
+                    };
+            
+                    itens.forEach(item => {
+                        Object.values(selects).forEach(select => {
+                            const option = criarOption(item);
+                            select.appendChild(option);
+                        });
+                    });
+                });
+        }
+        
+        function carregarLocais() {
+            enviarSolicitacao('lerLocais', {})
+                .then(data => {
+                    const locais = JSON.parse(data);
+                    const selects = {
+                        'localPreco': document.getElementById('localPreco'),
+                        'localAdicional': document.getElementById('localAdicional')
+                    };
+        
+                    locais.forEach(local => {
+                        Object.values(selects).forEach(select => {
+                            const option = criarOption(local);
+                            select.appendChild(option);
+                        });
+                    });
+                });
+        }
+        
+        function carregarIngredientes() {
+            enviarSolicitacao('lerIngredientes', {})
+                .then(data => {
+                    const ingredientes = JSON.parse(data);
+                    const selects = {
+                        'ingrediente': document.getElementById('ingrediente'),
+                        'AdicionalAdicional': document.getElementById('AdicionalAdicional')
+                    };
+        
+                    ingredientes.forEach(ingrediente => {
+                        Object.values(selects).forEach(select => {
+                            const option = criarOption(ingrediente);
+                            select.appendChild(option);
+                        });
+                    });
+                });
+        }
+        
+        function carregarAdicionais() {
+            enviarSolicitacao('lerAdicionais', {})
+                .then(data => {
+                    const ingredientes = JSON.parse(data);
+                    const selects = {
+                        'itemAdicionais': document.getElementById('itemAdicionais')
+                    };
+        
+                    ingredientes.forEach(ingrediente => {
+                        Object.values(selects).forEach(select => {
+                            const option = criarOption(ingrediente);
+                            select.appendChild(option);
+                        });
+                    });
+                });
+        }
+        
+        function carregarRevenda() {
+            enviarSolicitacao('lerRevenda', {})
+                .then(data => {
+                    const ingredientes = JSON.parse(data);
+                    const selects = {
+                        'itemRevenda': document.getElementById('itemRevenda')
+                    };
+        
+                    ingredientes.forEach(ingrediente => {
+                        Object.values(selects).forEach(select => {
+                            const option = criarOption(ingrediente);
+                            select.appendChild(option);
+                        });
+                    });
+                });
+        }
+        
+        function carregarVIngrediente() {
+            enviarSolicitacao('lerIngrediente', {})
+                .then(data => {
+                    const ingredientes = JSON.parse(data);
+                    const selects = {
+                        'itemVIngrediente': document.getElementById('itemVIngrediente')
+                    };
+        
+                    ingredientes.forEach(ingrediente => {
+                        Object.values(selects).forEach(select => {
+                            const option = criarOption(ingrediente);
+                            select.appendChild(option);
+                        });
+                    });
+                });
+        }
+        
+        function criarOption(value) {
+            const option = document.createElement('option');
+            option.value = value;
+            option.textContent = value;
+            return option;
+        }
+
+        
+        function inserirPreco() {
+            const item = document.getElementById('itemPreco').value;
+            const local = document.getElementById('localPreco').value;
+            const preco = document.getElementById('preco').value;
+        
+            enviarSolicitacao('inserirPreco', { item, local, preco })
+                .then(data => alert(data));
+        }
+        
+        function inserirAdicional() {
+            const adicional = document.getElementById('AdicionalAdicional').value;
+            const item = document.getElementById('itemAdicional').value;
+            const local = document.getElementById('localAdicional').value;
+        
+            enviarSolicitacao('inserirAdicional', { adicional, item, local })
+                .then(data => alert(data));
+        }
+        
+        function inserirProducao() {
+            const item = document.getElementById('itemProducao').value;
+            const quantidade = document.getElementById('quantidade_producao').value;
+        
+            enviarSolicitacao('inserirProducao', { item, quantidade })
+                .then(data => alert(data));
+        }
+        
+        function removerProducao() {
+            const item = document.getElementById('itemRProducao').value;
+            const quantidade = - document.getElementById('quantidade_Rproducao').value;
+        
+            enviarSolicitacao('inserirProducao', { item, quantidade })
+                .then(data => alert(data));
+        }
+        
+        function obterTodasLinhas(tabela) {
+            return enviarSolicitacao('obterTodasLinhas', { tabela })
+                .then(data => JSON.parse(data));
+        }
+        
+        function exibirTabela(tabela) {
+            obterTodasLinhas(tabela)
+                .then(linhas => {
+                    // Cria elementos de tabela HTML
+                    const tabelaHTML = document.getElementById('resultadoTabela');
+                    tabelaHTML.innerHTML = '';
+        
+                    if (linhas.length > 0) {
+                        // Cabeçalho da Tabela
+                        const cabecalho = document.createElement('tr');
+                        Object.keys(linhas[0]).forEach(coluna => {
+                            const th = document.createElement('th');
+                            th.textContent = coluna;
+                            cabecalho.appendChild(th);
+                        });
+                        tabelaHTML.appendChild(cabecalho);
+        
+                        // Linhas da Tabela
+                        linhas.forEach(linha => {
+                            const tr = document.createElement('tr');
+                            Object.values(linha).forEach(valor => {
+                                const td = document.createElement('td');
+                                td.textContent = valor !== null ? valor : '';
+                                tr.appendChild(td);
+                            });
+                            tabelaHTML.appendChild(tr);
+                        });
+                    } else {
+                        tabelaHTML.innerHTML = '<tr><td>Nenhuma linha encontrada</td></tr>';
+                    }
+                });
+        }
+        
+        function exibirLucro() {
+            // Obter as datas de início e fim dos campos do formulário
+            const dataInicio = document.getElementById('dataInicio').value;
+            const dataFim = document.getElementById('dataFim').value;
+        
+            // Verificar se as datas foram preenchidas
+            if (!dataInicio || !dataFim) {
+                alert("Por favor, preencha ambas as datas.");
+                return;
+            }
+        
+            // Enviar a solicitação ao back-end
+            enviarSolicitacao('consultarLucro', { inicio: dataInicio, fim: dataFim })
+                .then(data => {
+                    // Exibir o resultado do lucro na área específica
+                    document.getElementById('resultadoLucro').textContent = `Lucro total: ${data}`;
+                })
+                .catch(err => {
+                    // Exibir uma mensagem de erro, se houver
+                    document.getElementById('resultadoLucro').textContent = `Erro ao calcular o lucro: ${err.message}`;
+                });
+        }
+        
+        function exibirReceitas() {
+            // Obter as datas de início e fim dos campos do formulário
+            const dataInicio = document.getElementById('dataInicioReceitas').value;
+            const dataFim = document.getElementById('dataFimReceitas').value;
+            const dataReceita = document.getElementById('itemReceita').value;
+            // Verificar se as datas foram preenchidas
+            if (!dataInicio || !dataFim) {
+                alert("Por favor, preencha ambas as datas.");
+                return;
+            }
+        
+            // Enviar a solicitação ao back-end
+            enviarSolicitacao('consultarReceitas', { item:dataReceita ,inicio: dataInicio, fim: dataFim })
+                .then(data => {
+                    // Exibir o resultado do lucro na área específica
+                    document.getElementById('resultadoReceitas').textContent = `Em estoque: ${data}`;
+                })
+                .catch(err => {
+                    // Exibir uma mensagem de erro, se houver
+                    document.getElementById('resultadoReceitas').textContent = `Erro ao calcular o estoque: ${err.message}`;
+                });
+        }
+        
+        function exibirAdicionais() {
+            // Obter as datas de início e fim dos campos do formulário
+            const dataInicio = document.getElementById('dataInicioAdicionais').value;
+            const dataFim = document.getElementById('dataFimAdicionais').value;
+            const dataReceita = document.getElementById('itemAdicionais').value;
+            // Verificar se as datas foram preenchidas
+            if (!dataInicio || !dataFim) {
+                alert("Por favor, preencha ambas as datas.");
+                return;
+            }
+        
+            // Enviar a solicitação ao back-end
+            enviarSolicitacao('consultarAdicionais', { item:dataReceita , inicio: dataInicio, fim: dataFim })
+                .then(data => {
+                    // Exibir o resultado do lucro na área específica
+                    document.getElementById('resultadoAdicionais').textContent = `Em estoque: ${data}`;
+                })
+                .catch(err => {
+                    // Exibir uma mensagem de erro, se houver
+                    document.getElementById('resultadoAdicionais').textContent = `Erro ao calcular o estoque: ${err.message}`;
+                });
+        }
+        
+        function exibirRevenda() {
+            // Obter as datas de início e fim dos campos do formulário
+            const dataInicio = document.getElementById('dataInicioRevenda').value;
+            const dataFim = document.getElementById('dataFimRevenda').value;
+            const dataReceita = document.getElementById('itemRevenda').value;
+            // Verificar se as datas foram preenchidas
+            if (!dataInicio || !dataFim) {
+                alert("Por favor, preencha ambas as datas.");
+                return;
+            }
+        
+            // Enviar a solicitação ao back-end
+            enviarSolicitacao('consultarRevenda', { item:dataReceita , inicio: dataInicio, fim: dataFim })
+                .then(data => {
+                    // Exibir o resultado do lucro na área específica
+                    document.getElementById('resultadoRevenda').textContent = `Em estoque: ${data}`;
+                })
+                .catch(err => {
+                    // Exibir uma mensagem de erro, se houver
+                    document.getElementById('resultadoRevenda').textContent = `Erro ao calcular o estoque: ${err.message}`;
+                });
+        }
+        
+        function exibirVIngrediente() {
+            // Obter as datas de início e fim dos campos do formulário
+            const dataInicio = document.getElementById('dataInicioVIngrediente').value;
+            const dataFim = document.getElementById('dataFimVIngrediente').value;
+            const dataReceita = document.getElementById('itemVIngrediente').value;
+            // Verificar se as datas foram preenchidas
+            if (!dataInicio || !dataFim) {
+                alert("Por favor, preencha ambas as datas.");
+                return;
+            }
+        
+            // Enviar a solicitação ao back-end
+            enviarSolicitacao('consultarIngredientes', { item:dataReceita , inicio: dataInicio, fim: dataFim })
+                .then(data => {
+                    // Exibir o resultado do lucro na área específica
+                    document.getElementById('resultadoVIngrediente').textContent = `Em estoque: ${data}`;
+                })
+                .catch(err => {
+                    // Exibir uma mensagem de erro, se houver
+                    document.getElementById('resultadoVIngrediente').textContent = `Erro ao calcular o estoque: ${err.message}`;
+                });
+        }
+
+
+        
+        function mostrarFormulario(formularioId) {
+            recarregar();
+            // Lista dos IDs de todos os formulários e títulos
+            const formularios = [
+                'formInserirLocal', 'formAdicionarIngrediente', 'formInserirReceita',
+                'formInserirPreco', 'formInserirCompra', 'formInserirVenda', 'formInserirProducao',
+                'formRemoverProducao', 'formInserirAdicional', 'formVisualizarTabela', 'formVisualizarLucro',
+                'formVisualizarReceitas', 'formVisualizarAdicionais', 'formVisualizarRevenda', 'formVisualizarVIngrediente'
+            ];
+            const titulos = [
+                'tituloLocal', 'tituloIngrediente', 'tituloReceita',
+                'tituloPreco', 'tituloCompra', 'tituloVenda', 'tituloProducao',
+                'tituloRProducao', 'tituloAdicional', 'tituloTabela', 'tituloLucro',
+                'tituloReceitas', 'tituloAdicionais', 'tituloRevenda', 'tituloVIngrediente'
+            ];
+        
+            // Ocultar todos os formulários e títulos
+            formularios.forEach(id => document.getElementById(id).style.display = 'none');
+            titulos.forEach(id => document.getElementById(id).style.display = 'none');
+        
+            // Mostrar o formulário e título selecionados
+            const indice = formularios.indexOf(formularioId);
+            if (indice !== -1) {
+                document.getElementById(formularioId).style.display = 'block';
+                document.getElementById(titulos[indice]).style.display = 'block';
+            }
+        }
+
+        
+        // Inicializar carregando os itens e os locais para o formulário de Preço
+        document.addEventListener('DOMContentLoaded', () => { recarregar();});
+        function recarregar(){
+            carregarItens();
+            carregarLocais();
+            carregarIngredientes();
+            carregarListaIngredientes();
+            carregarAdicionais();
+            carregarRevenda();
+            carregarVIngrediente();
+        }
+    </script>
+</head>
+<body>
+    <h1>Gestão da Empresa</h1>
+    <!-- Menu de Ações -->
+    <h2>Selecione uma Ação</h2>
+    <div class="menu">
+        <button onclick="mostrarFormulario('formInserirLocal')">Inserir Local</button>
+        <button onclick="mostrarFormulario('formInserirReceita')">Inserir Receita</button>
+        <button onclick="mostrarFormulario('formInserirAdicional')">Inserir Adicional</button>
+        <button onclick="mostrarFormulario('formInserirPreco')">Inserir Preço</button>
+        <button onclick="mostrarFormulario('formInserirCompra')">Inserir Compra</button>
+        <button onclick="mostrarFormulario('formInserirVenda')">Inserir Venda</button>
+        <button onclick="mostrarFormulario('formInserirProducao')">Inserir Produção</button>
+        <button style="background-color: #FF002B;" onclick="mostrarFormulario('formRemoverProducao')">Remover Produção</button>
+        <button style="background-color: #00FF80;" onclick="mostrarFormulario('formAdicionarIngrediente')">Adicionar Ingrediente</button>
+        <button style="background-color: #FFFF00; color: #000000;" onclick="mostrarFormulario('formVisualizarTabela')">Visualizar Tabela</button>
+        <button style="background-color: #FFFF00; color: #000000;" onclick="mostrarFormulario('formVisualizarReceitas')">Visualizar Receitas</button>
+        <button style="background-color: #FFFF00; color: #000000;" onclick="mostrarFormulario('formVisualizarAdicionais')">Visualizar Adicionais</button>
+        <button style="background-color: #FFFF00; color: #000000;" onclick="mostrarFormulario('formVisualizarRevenda')">Visualizar Revenda</button>
+        <button style="background-color: #FFFF00; color: #000000;" onclick="mostrarFormulario('formVisualizarVIngrediente')">Visualizar Ingrediente</button>
+        <button style="background-color: #FFFF00; color: #000000;" onclick="mostrarFormulario('formVisualizarLucro')">Visualizar Lucro</button>
+        
+    </div>
+
+    <!-- Formulário de Inserção de Local -->
+    <h2 id="tituloLocal" style="display:none;">Inserir Local</h2>
+    <form id="formInserirLocal" style="display:none;">
+        <label>Local:</label>
+        <input type="text" id="local" required><br>
+        <label>Latitude:</label>
+        <input type="number" step="any" id="latitude" required><br>
+        <label>Longitude:</label>
+        <input type="number" step="any" id="longitude" required><br>
+        <button type="button" onclick="inserirLocal()">Inserir Local</button>
+        <button onclick="obterCoordenadas()">Obter Coordenadas do seu Local</button>
+        <p id="resultado"></p>
+    </form>
+
+    <!-- Formulário de Adicionar Ingrediente -->
+    <h2 id="tituloIngrediente" style="display:none;">Adicionar Ingrediente</h2>
+    <form style="display:none;" id="formAdicionarIngrediente">
+        <label>Nome do Ingrediente:</label>
+        <input type="text" id="nomeIngrediente" required><br>
+        <button style="background-color: #00FF80;" type="button" onclick="adicionarIngrediente()">Adicionar Ingrediente</button>
+    </form>
+
+    <!-- Formulário de Inserir Receita -->
+    <h2 id="tituloReceita" style="display:none;">Inserir Receita</h2>
+    <form style="display:none;" id="formInserirReceita">
+        <label>Nome da Receita:</label>
+        <input type="text" id="nomeReceita" required><br>
+        <div id="ingredientesContainer"></div>
+        <button type="button" onclick="adicionarIngredienteCampo()">Adicionar Ingrediente</button>
+        <button type="button" onclick="inserirReceita()">Inserir Receita</button>
+    </form>
+    
+    <!-- Formulário de Inserir Preço -->
+    <h2 id="tituloPreco" style="display:none;">Inserir Preço</h2>
+    <form style="display:none;" id="formInserirPreco">
+        <label>Item:</label>
+        <select id="itemPreco"></select><br>
+        <label>Local:</label>
+        <select id="localPreco"></select><br>
+        <label>Preço:</label>
+        <input type="text" id="preco" required><br>
+        <button type="button" onclick="inserirPreco()">Inserir Preço</button>
+    </form>
+    
+    <!-- Formulário de Inserir Adicional -->
+    <h2 id="tituloAdicional" style="display:none;">Inserir Adicional</h2>
+    <form style="display:none;" id="formInserirAdicional">
+        <label>Adicional:</label>
+        <select id="AdicionalAdicional"></select><br>
+        <label>Item:</label>
+        <select id="itemAdicional"></select><br>
+        <label>Local:</label>
+        <select id="localAdicional"></select><br>
+        <button type="button" onclick="inserirAdicional()">Inserir Adicional</button>
+    </form>
+
+    <!-- Formulário de Inserir Compra -->
+    <h2 id="tituloCompra" style="display:none;">Inserir Compra</h2>
+    <form style="display:none;" id="formInserirCompra">
+        <label>Ingrediente:</label>
+        <select id="ingrediente"></select><br>
+        <label>Preço:</label>
+        <input type="text" id="preco" required><br>
+        <label>Quantidade:</label>
+        <input type="text" id="quantidade" required><br>
+        <button type="button" onclick="inserirCompra()">Inserir Compra</button>
+    </form>
+
+    <!-- Formulário de Inserir Venda -->
+    <h2 id="tituloVenda" style="display:none;">Inserir Venda</h2>
+    <form style="display:none;" id="formInserirVenda">
+        <label>Item:</label>
+        <select id="item"></select><br>
+        <label>Quantidade:</label>
+        <input type="text" id="quantidade_venda" required><br>
+        <button type="button" onclick="inserirVenda()">Inserir Venda</button>
+    </form>
+
+    <!-- Formulário de Inserir Producao -->
+    <h2 id="tituloProducao" style="display:none;">Inserir Producao</h2>
+    <form style="display:none;" id="formInserirProducao">
+        <label>Item:</label>
+        <select id="itemProducao"></select><br>
+        <label>Quantidade:</label>
+        <input type="text" id="quantidade_producao" required><br>
+        <button type="button" onclick="inserirProducao()">Inserir Producao</button>
+    </form>
+
+    <!-- Formulário de Remover Producao -->
+    <h2 id="tituloRProducao" style="display:none;">Remover Produto</h2>
+    <form style="display:none;" id="formRemoverProducao">
+        <label>Item:</label>
+        <select id="itemRProducao"></select><br>
+        <label>Quantidade a remover:</label>
+        <input type="text" id="quantidade_Rproducao" required><br>
+        <button style="background-color: #FF002B;" type="button" onclick="removerProducao()">Remover Produto(s)</button>
+    </form>
+
+    <!-- Formulário de Visualizar Tabela -->
+    <h2 id="tituloTabela" style="display:none;">Visualizar Tabela</h2>
+    <form style="display:none;" id="formVisualizarTabela">
+        <label>Selecione uma Tabela:</label>
+        <select id="tabela" onchange="exibirTabela(this.value)">
+            <option value="Receitas">Receitas</option>
+            <option value="Compras">Compras</option>
+            <option value="Vendas">Vendas</option>
+            <option value="Locais">Locais</option>
+            <option value="Precos">Precos</option>
+            <option value="Producao">Producao</option>
+            <option value="Adicionais">Adicionais</option>
+        </select>
+        <table id="resultadoTabela" border="1">
+        </table>
+    </form>
+    
+    <!-- Formulário de Visualizar Lucro -->
+    <h2 id="tituloLucro" style="display:none;">Visualizar Lucro</h2>
+    <form style="display:none;" id="formVisualizarLucro">
+        <label for="dataInicio">Selecione uma data de início:</label>
+        <input type="date" id="dataInicio" name="dataInicio" required><br>
+        <label for="dataFim">Selecione uma data de fim:</label>
+        <input type="date" id="dataFim" name="dataFim" required><br>
+        <button type="button" style="background-color: #FFFF00; color: #000000;" onclick="exibirLucro()">Exibir Lucro</button>
+        <p id="resultadoLucro"></p>
+    </form>
+    
+    <!-- Formulário de Visualizar Receitas -->
+    <h2 id="tituloReceitas" style="display:none;">Visualizar Estoque de Receitas</h2>
+    <form style="display:none;" id="formVisualizarReceitas">
+        <label>Receita:</label>
+        <select id="itemReceita"></select><br>
+        <label for="dataInicioReceitas">Selecione uma data de início:</label>
+        <input type="date" id="dataInicioReceitas" name="dataInicioReceitas" required><br>
+        <label for="dataFimReceitas">Selecione uma data de fim:</label>
+        <input type="date" id="dataFimReceitas" name="dataFimReceitas" required><br>
+        <button type="button" style="background-color: #FFFF00; color: #000000;" onclick="exibirReceitas()">Exibir Estoque</button>
+        <p id="resultadoReceitas"></p>
+    </form>
+    
+    <!-- Formulário de Visualizar Adicionais -->
+    <h2 id="tituloAdicionais" style="display:none;">Visualizar Estoque de Adicionais</h2>
+    <form style="display:none;" id="formVisualizarAdicionais">
+        <label>Adicional:</label>
+        <select id="itemAdicionais"></select><br>
+        <label for="dataInicioAdicionais">Selecione uma data de início:</label>
+        <input type="date" id="dataInicioAdicionais" name="dataInicioAdicionais" required><br>
+        <label for="dataFimAdicionais">Selecione uma data de fim:</label>
+        <input type="date" id="dataFimAdicionais" name="dataFimAdicionais" required><br>
+        <button type="button" style="background-color: #FFFF00; color: #000000;" onclick="exibirAdicionais()">Exibir Estoque</button>
+        <p id="resultadoAdicionais"></p>
+    </form>
+    
+    <!-- Formulário de Visualizar Revenda -->
+    <h2 id="tituloRevenda" style="display:none;">Visualizar Estoque de Revenda</h2>
+    <form style="display:none;" id="formVisualizarRevenda">
+        <label>Revenda:</label>
+        <select id="itemRevenda"></select><br>
+        <label for="dataInicioRevenda">Selecione uma data de início:</label>
+        <input type="date" id="dataInicioRevenda" name="dataInicioRevenda" required><br>
+        <label for="dataFimRevenda">Selecione uma data de fim:</label>
+        <input type="date" id="dataFimRevenda" name="dataFimRevenda" required><br>
+        <button type="button" style="background-color: #FFFF00; color: #000000;" onclick="exibirRevenda()">Exibir Estoque</button>
+        <p id="resultadoRevenda"></p>
+    </form>
+    
+    <!-- Formulário de Visualizar Ingrediente -->
+    <h2 id="tituloVIngrediente" style="display:none;">Visualizar Estoque de Ingrediente</h2>
+    <form style="display:none;" id="formVisualizarVIngrediente">
+        <label>Ingrediente:</label>
+        <select id="itemVIngrediente"></select><br>
+        <label for="dataInicioVIngrediente">Selecione uma data de início:</label>
+        <input type="date" id="dataInicioVIngrediente" name="dataInicioVIngrediente" required><br>
+        <label for="dataFimRevenda">Selecione uma data de fim:</label>
+        <input type="date" id="dataFimVIngrediente" name="dataFimVIngrediente" required><br>
+        <button type="button" style="background-color: #FFFF00; color: #000000;" onclick="exibirVIngrediente()">Exibir Estoque</button>
+        <p id="resultadoVIngrediente"></p>
+    </form>
+
+</body>
+</html>
